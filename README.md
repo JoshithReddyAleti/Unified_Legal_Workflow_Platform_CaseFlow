@@ -29,6 +29,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Claude AI](https://img.shields.io/badge/Claude-Sonnet_4.6-CC785C?style=for-the-badge&logo=anthropic&logoColor=white)](https://anthropic.com)
+[![Gemini](https://img.shields.io/badge/Gemini-2.0_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://aistudio.google.com)
 [![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-7C3AED?style=for-the-badge)](https://modelcontextprotocol.io)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?style=for-the-badge&logo=python&logoColor=white)](https://sqlalchemy.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
@@ -40,7 +41,7 @@
 <td align="center"><b>⚡ 5-Stage AI Pipeline</b><br/><sub>Classify → Link → Summarize → Extract → Timeline</sub></td>
 <td align="center"><b>🤖 16 MCP Tools</b><br/><sub>Native Claude Desktop Integration</sub></td>
 <td align="center"><b>🔒 Approval-First</b><br/><sub>AI proposes. Attorneys decide.</sub></td>
-<td align="center"><b>🚀 Zero-Config Demo</b><br/><sub>Works without an API key</sub></td>
+<td align="center"><b>🧠 Dual AI Providers</b><br/><sub>Anthropic Claude · Google Gemini · Demo</sub></td>
 </tr>
 </table>
 
@@ -50,7 +51,7 @@
 
 <br/>
 
-[**⚡ Quick Start**](#-quick-start) · [**🤖 MCP Server**](#-mcp-server--claude-desktop-integration) · [**🏗️ Architecture**](#%EF%B8%8F-architecture) · [**✨ Features**](#-feature-modules) · [**🛣️ Roadmap**](#%EF%B8%8F-roadmap)
+[**⚡ Setup Guide**](#-complete-setup-guide) · [**🧠 AI Providers**](#-ai-provider-selection) · [**🤖 MCP Server**](#-mcp-server--claude-desktop-integration) · [**🏗️ Architecture**](#%EF%B8%8F-architecture) · [**✨ Features**](#-feature-modules) · [**🛣️ Roadmap**](#%EF%B8%8F-roadmap)
 
 </div>
 
@@ -106,7 +107,7 @@ Paste into CaseFlow Intake (10 seconds)
 ✦ Tasks: ["Preserve communications", "File response"]
 ✦ Parties: ["Meridian Tech", "CompetitorX"]
 ✦ Timeline: Event created automatically
-✦ Audit: Logged with Claude model version
+✦ Audit: Logged with AI model version
         ↓
   🟢  Nothing slips. Ever.
 ```
@@ -149,7 +150,7 @@ A 16-tool MCP server that lets attorneys talk to their matter database in plain 
 </tr>
 </table>
 
-Both interfaces run against the **same database**, in real-time.
+Both interfaces run against the **same database**, in real-time. The AI intelligence layer supports **Anthropic Claude or Google Gemini** — swap providers by setting a single environment variable.
 
 <br/>
 
@@ -178,7 +179,7 @@ graph TB
         direction TB
         API["REST API  /api/matters · /api/intake · /api/tasks\n/api/timelines · /api/knowledge · /api/audit\n/api/notes · /api/drafts · /api/connectors"]
 
-        subgraph AI ["🧠  Intelligence Layer  ·  claude-sonnet-4-6"]
+        subgraph AI ["🧠  Intelligence Layer  ·  7 AI Modules"]
             direction LR
             IC["⚡ Intake\nClassifier"]
             CS["📝 Comm\nSummarizer"]
@@ -188,6 +189,8 @@ graph TB
             QA["🔍 Legal\nQ&A RAG"]
             DG["✍️ Draft\nGenerator"]
         end
+
+        LLM["llm_client.py  ·  Provider Abstraction\nAnthropicKey → Claude  |  GeminiKey → Gemini  |  None → Demo"]
 
         SVC["Services Layer\nIngestionService · AuditService · MockDataService"]
         ORM["SQLAlchemy ORM\nMatter · Communication · Task · Deadline\nTimelineEvent · KnowledgeItem · AuditLog · MatterNote"]
@@ -201,16 +204,23 @@ graph TB
         T16["16 AI Tools\nlist_matters · get_matter · create_matter\nprocess_intake · classify · summarize · extract\nget_timeline · add_event · list_tasks · create_task\nlist_deadlines · confirm_deadline\nquery_knowledge · list_sources · get_audit_trail"]
     end
 
-    CLAUDE["☁️  Anthropic API\nclaude-sonnet-4-6"]
+    subgraph PROVIDERS ["☁️  AI PROVIDERS"]
+        CLAUDE["Anthropic Claude\nclaude-sonnet-4-6\nPriority 1"]
+        GEMINI["Google Gemini\ngemini-2.0-flash\nPriority 2"]
+        DEMO["Demo Mode\nNo API key\nFallback"]
+    end
 
     FE -->|"REST / JSON\nAxios"| BE
     API --> AI
+    AI --> LLM
     API --> SVC
     SVC --> ORM
     ORM --> DB
-    AI -->|"API calls"| CLAUDE
+    LLM -->|"ANTHROPIC_API_KEY"| CLAUDE
+    LLM -->|"GEMINI_API_KEY"| GEMINI
+    LLM -.->|"no key set"| DEMO
     MCPS --> ORM
-    MCPS -->|"API calls"| CLAUDE
+    MCPS --> LLM
 ```
 
 <br/>
@@ -239,7 +249,7 @@ flowchart LR
 <br/>
 
 > [!NOTE]
-> **Fallback mode:** When no `ANTHROPIC_API_KEY` is set, every stage falls back to a rule-based demo response. The platform is fully explorable without any API key.
+> **Fallback mode:** When no API key is set, every stage falls back to a rule-based demo response. The platform is fully explorable without any API key.
 
 <br/>
 
@@ -258,7 +268,7 @@ flowchart LR
 
 <br/>
 
-The beating heart of CaseFlow. Every inbound communication runs through a 5-stage AI pipeline powered by `claude-sonnet-4-6`.
+The beating heart of CaseFlow. Every inbound communication runs through a 5-stage AI pipeline powered by **Anthropic Claude** (`claude-sonnet-4-6`) or **Google Gemini** (`gemini-2.0-flash`) — whichever provider you configure.
 
 **Classification categories:**
 
@@ -326,6 +336,15 @@ MATTER  ────────────────────────
 ```
   OPEN  ──────►  ACTIVE  ──────►  ON HOLD  ──────►  CLOSED
 ```
+
+**Notes system — 4 types with visual color coding:**
+
+| Type | Badge Color | Use Case |
+|------|-------------|----------|
+| 📝 **General** | Grey | Free-form observations, admin notes |
+| ♟️ **Strategy** | Blue | Legal strategy, privileged thinking |
+| 🔎 **Observation** | Purple | Pattern notes, fact observations |
+| ⚠️ **Risk** | Amber | Risk flags attorneys must not miss |
 
 <br/>
 </details>
@@ -469,7 +488,7 @@ sequenceDiagram
     participant A as 👨‍💼 Attorney
     participant CF as ⚙️ CaseFlow
     participant KB as 📚 Knowledge Base
-    participant CL as 🤖 Claude API
+    participant CL as 🤖 AI Provider
 
     A->>CF: "What's our NDA breach response procedure?"
     CF->>KB: Search approved sources (playbooks, policies, templates)
@@ -608,16 +627,74 @@ AuditLog
   ├── entity_id        UUID of the affected record
   ├── matter_id        matter context (for cross-filtering)
   ├── action           create · update · confirm · query · triage
-  ├── ai_model_used    "claude-sonnet-4-6"  ← tagged on every AI call
+  ├── ai_model_used    "claude-sonnet-4-6"  or  "gemini-2.0-flash"
+  │                    ← tagged on every AI call, exact model version
   ├── details          JSON: source, confirmed_by, query text, etc.
   └── created_at       UTC timestamp — immutable
 ```
 
 > [!IMPORTANT]
-> **Every AI model call is tagged with the model version.** If AI behavior changes between `claude-sonnet-4-6` versions, you can audit exactly which model made which decision on which date.
+> **Every AI model call is tagged with the exact model version and provider.** If you ever need to know whether a decision was made by Claude or Gemini, on what date, and with what input — it's in the audit log.
 
 <br/>
 </details>
+
+<br/>
+
+---
+
+<br/>
+
+## 🧠 AI Provider Selection
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  C H O O S E   Y O U R   A I   E N G I N E                                  ║
+║  CaseFlow supports three modes — swap with a single environment variable     ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+  ┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+  │  ANTHROPIC CLAUDE  │    │  GOOGLE GEMINI     │    │  DEMO MODE         │
+  │  claude-sonnet-4-6 │    │  gemini-2.0-flash  │    │  No API key        │
+  │                    │    │                    │    │                    │
+  │  Priority: 1       │ ── │  Priority: 2       │ ── │  Priority: 3       │
+  │  (checked first)   │    │  (checked second)  │    │  (always fallback) │
+  │                    │    │                    │    │                    │
+  │  Best accuracy     │    │  Free tier avail.  │    │  Instant start     │
+  │  Production ready  │    │  Cost-effective    │    │  Full evaluation   │
+  └────────────────────┘    └────────────────────┘    └────────────────────┘
+```
+
+**Provider priority logic (in `llm_client.py`):**
+
+```
+if ANTHROPIC_API_KEY is set  →  use claude-sonnet-4-6       (Priority 1)
+elif GEMINI_API_KEY is set   →  use gemini-2.0-flash         (Priority 2)
+else                         →  Demo Mode, seeded responses  (Fallback)
+```
+
+> [!NOTE]
+> If **both** keys are set, Anthropic always wins. To switch to Gemini, simply remove or comment out `ANTHROPIC_API_KEY` in your `.env` file.
+
+<br/>
+
+**Provider comparison:**
+
+| | 🟤 Anthropic Claude | 🔵 Google Gemini | ⚫ Demo Mode |
+|---|---|---|---|
+| **Priority** | 1 — checked first | 2 — fallback to if no Anthropic key | 3 — no keys needed |
+| **Best for** | Production · legal accuracy | Cost-sensitive · free-tier evaluation | Evaluation · demos · testing |
+| **Env variable** | `ANTHROPIC_API_KEY` | `GEMINI_API_KEY` | *(not required)* |
+| **Model** | `claude-sonnet-4-6` | Configurable via `LLM_MODEL` | N/A |
+| **Default model** | hardcoded | `gemini-2.0-flash` | N/A |
+| **Free tier** | No | ✅ Yes — generous limits | ✅ Yes — fully free |
+| **Get your key** | [console.anthropic.com](https://console.anthropic.com) | [aistudio.google.com](https://aistudio.google.com) | — |
+
+<br/>
+
+**What changes when you switch providers?**
+
+Nothing in the product experience. The 7 intelligence modules — classifier, summarizer, extractor, linker, timeline builder, Q&A engine, draft generator — all route through `llm_client.py`. Every module calls `llm_client.complete()` or `llm_client.acomplete()`. The provider is completely transparent to the rest of the codebase.
 
 <br/>
 
@@ -643,36 +720,52 @@ The MCP server runs as a **stdio process** — Claude Desktop spawns it and comm
 
 <br/>
 
-### Setup in 3 Steps
+### 🔧 Claude Desktop Configuration
 
-**Step 1** — Install the MCP package
+**Step 1 — Install the MCP package** (in the same Python environment as the backend)
 
 ```bash
 pip install mcp
 ```
 
-**Step 2** — Add CaseFlow to your Claude Desktop config
+**Step 2 — Add CaseFlow to your Claude Desktop config**
 
 ```jsonc
-// Windows:  %APPDATA%/Claude/claude_desktop_config.json
+// Windows:  %APPDATA%\Claude\claude_desktop_config.json
 // Mac:       ~/Library/Application Support/Claude/claude_desktop_config.json
 
 {
   "mcpServers": {
     "caseflow": {
       "command": "python",
-      "args": ["C:/path/to/unified_legal_workflow_platform/mcp-server/server.py"],
+      "args": ["C:/full/path/to/unified_legal_workflow_platform/mcp-server/server.py"],
       "env": {
+        // ── Option A: Use Anthropic Claude ──
         "ANTHROPIC_API_KEY": "sk-ant-your-key-here"
+
+        // ── Option B: Use Google Gemini ──
+        // "GEMINI_API_KEY": "your-gemini-api-key-here",
+        // "LLM_MODEL": "gemini-2.0-flash"
       }
     }
   }
 }
 ```
 
-**Step 3** — Restart Claude Desktop
+> [!TIP]
+> **Use the same API key** in both `backend/.env` and `claude_desktop_config.json` — both the web app and Claude Desktop will then run through the same AI provider, and audit logs will show consistent model attribution.
+
+**Step 3 — Restart Claude Desktop**
 
 > ✅ CaseFlow tools appear in Claude's tool panel. You're live.
+
+**Verify it's working:**
+
+In Claude Desktop, type:
+```
+List all my matters
+```
+Claude should call `list_matters` and return your seeded demo matters.
 
 <br/>
 
@@ -821,7 +914,7 @@ query_legal_knowledge({
 
 | Tool | Description |
 |------|-------------|
-| `get_audit_trail` | Full event log filtered by matter, event type — AI model attributed per entry |
+| `get_audit_trail` | Full event log filtered by matter, event type — AI model + provider attributed per entry |
 
 <br/>
 </details>
@@ -832,129 +925,465 @@ query_legal_knowledge({
 
 <br/>
 
-## 🚀 Quick Start
+## 🚀 Complete Setup Guide
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│   FROM ZERO TO LIVE — COMPLETE END-TO-END INSTALLATION                      │
+│   Estimated time: 10 minutes (demo) · 15 minutes (with AI provider)         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 <br/>
 
-### Prerequisites
+### ✅ Prerequisites Checklist
 
-<table>
-<tr>
-<td align="center">
-<img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"/>
-</td>
-<td align="center">
-<img src="https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"/>
-</td>
-<td align="center">
-<img src="https://img.shields.io/badge/npm-9+-CB3837?style=flat-square&logo=npm&logoColor=white" alt="npm"/>
-</td>
-</tr>
-</table>
+Before you begin, verify you have:
+
+```
+□  Python 3.11 or newer      →  python --version
+□  Node.js 18 or newer       →  node --version
+□  npm 9 or newer            →  npm --version
+□  Git                       →  git --version
+```
+
+To check quickly:
+
+```powershell
+# Windows PowerShell
+python --version; node --version; npm --version; git --version
+```
+
+```bash
+# Mac / Linux
+python3 --version && node --version && npm --version && git --version
+```
+
+> [!TIP]
+> Don't have Python 3.11+? Download from [python.org](https://python.org/downloads). Don't have Node 18+? Download from [nodejs.org](https://nodejs.org).
 
 <br/>
+
+---
+
+### ❶ &nbsp; Get the Repository
+
+```bash
+git clone https://github.com/your-username/unified_legal_workflow_platform_CaseFlow.git
+cd unified_legal_workflow_platform
+```
+
+> [!NOTE]
+> If you downloaded the zip instead of cloning, simply unzip and navigate into the folder.
+
+**What you'll see:**
+```
+unified_legal_workflow_platform/
+├── backend/
+├── frontend/
+├── mcp-server/
+├── scripts/
+└── README.md
+```
+
+<br/>
+
+---
+
+### ❷ &nbsp; Backend Setup
+
+<br/>
+
+#### 2a. Create and activate a Python virtual environment
+
+**Windows (PowerShell):**
+
+```powershell
+cd backend
+python -m venv venv
+venv\Scripts\activate
+```
+
+**Mac / Linux (bash/zsh):**
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+```
+
+After activation, your prompt should show `(venv)`:
+```
+(venv) PS C:\...\backend>
+```
+
+<br/>
+
+#### 2b. Install backend dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+This installs: FastAPI · Uvicorn · SQLAlchemy · Pydantic · Anthropic SDK · `google-genai` · and all other dependencies.
+
+**Expected output (last few lines):**
+```
+Successfully installed anthropic-0.x.x fastapi-0.111.x google-genai-0.8.x
+pydantic-2.x.x sqlalchemy-2.x.x uvicorn-0.x.x ...
+```
+
+> [!WARNING]
+> If you see `pip: command not found`, make sure your virtual environment is activated. You should see `(venv)` in your prompt before running pip.
+
+<br/>
+
+---
+
+### ❸ &nbsp; Configure Your AI Provider
+
+This is the only required configuration step. Create a `.env` file in the `backend/` folder:
+
+**Windows (PowerShell):**
+```powershell
+cp .env.example .env
+notepad .env
+```
+
+**Mac / Linux:**
+```bash
+cp .env.example .env
+nano .env   # or open in any text editor
+```
+
+<br/>
+
+#### Choose one of three configurations:
+
+---
+
+**Option A — Anthropic Claude** *(best accuracy, recommended for production)*
+
+Get your API key from [console.anthropic.com](https://console.anthropic.com) → API Keys.
+
+```bash
+# backend/.env
+
+ANTHROPIC_API_KEY=sk-ant-api03-your-actual-key-here
+
+DATABASE_URL=sqlite:///./caseflow.db
+SECRET_KEY=change-me-in-production
+ENVIRONMENT=development
+SEED_DEMO_DATA=true
+```
+
+---
+
+**Option B — Google Gemini** *(free tier available, great for evaluation)*
+
+Get your API key from [aistudio.google.com](https://aistudio.google.com) → Get API Key. The free tier has generous limits.
+
+```bash
+# backend/.env
+
+GEMINI_API_KEY=AIza-your-actual-gemini-key-here
+LLM_MODEL=gemini-2.0-flash
+
+DATABASE_URL=sqlite:///./caseflow.db
+SECRET_KEY=change-me-in-production
+ENVIRONMENT=development
+SEED_DEMO_DATA=true
+```
+
+---
+
+**Option C — Demo Mode** *(no API key at all — works immediately)*
+
+```bash
+# backend/.env
+
+# No ANTHROPIC_API_KEY or GEMINI_API_KEY — platform runs in demo mode
+DATABASE_URL=sqlite:///./caseflow.db
+SECRET_KEY=change-me-in-production
+ENVIRONMENT=development
+SEED_DEMO_DATA=true
+```
+
+---
+
+> [!IMPORTANT]
+> **Priority rule:** If you set both `ANTHROPIC_API_KEY` and `GEMINI_API_KEY`, Anthropic always takes priority. To use Gemini, ensure `ANTHROPIC_API_KEY` is absent or empty.
+
+<br/>
+
+---
+
+### ❹ &nbsp; Start the Backend Server
+
+Make sure you're in the `backend/` directory with `(venv)` active:
+
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**What you'll see on successful startup:**
+```
+INFO:     Will watch for changes in these directories: ['./app']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [12345]
+INFO:     Started server process [12346]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
+**Verify it's running** — open a new terminal tab and run:
+
+```bash
+curl http://localhost:8000
+```
+
+Or just open [http://localhost:8000](http://localhost:8000) in your browser. You should see:
+
+```json
+{
+  "name": "CaseFlow MCP",
+  "version": "1.0.0",
+  "description": "MCP-first unified legal workflow platform",
+  "docs": "/docs",
+  "ai_enabled": true,
+  "ai_provider": "gemini"
+}
+```
+
+| Response field | What it means |
+|---------------|---------------|
+| `"ai_enabled": true` | An API key was found and loaded correctly |
+| `"ai_enabled": false` | No API key — running in demo mode |
+| `"ai_provider": "anthropic"` | Using Anthropic Claude |
+| `"ai_provider": "gemini"` | Using Google Gemini |
+| `"ai_provider": "none"` | Demo mode — no provider configured |
+
+**Interactive API docs** are auto-generated and available at:
+
+| | URL |
+|---|---|
+| 🌐 API root | [http://localhost:8000](http://localhost:8000) |
+| 📚 Swagger UI | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| 📖 ReDoc | [http://localhost:8000/redoc](http://localhost:8000/redoc) |
+| ❤️ Health check | [http://localhost:8000/health](http://localhost:8000/health) |
+
+<br/>
+
+---
+
+### ❺ &nbsp; Frontend Setup
+
+Open a **new terminal window** (keep the backend running in the first one).
+
+```bash
+cd frontend
+npm install
+```
+
+**Expected output (last line):**
+```
+added 342 packages in 45s
+```
+
+Then start the development server:
+
+```bash
+npm run dev
+```
+
+**What you'll see:**
+```
+   ▲ Next.js 14.x.x
+   - Local:        http://localhost:3000
+   - Environments: .env.local
+
+ ✓ Ready in 2.1s
+```
+
+**Open [http://localhost:3000](http://localhost:3000) in your browser.**
+
+You should see the CaseFlow dashboard load with:
+- 3 demo matters in the matters list
+- Intake queue with pre-processed communications
+- Dashboard stats populated from demo data
+
+> [!TIP]
+> If the frontend loads but shows empty data, check that the backend is running on port 8000. The frontend calls `http://localhost:8000/api/...` for all data.
+
+<br/>
+
+---
+
+### ❻ &nbsp; Verify End-to-End
+
+Run through this quick verification checklist:
+
+```
+□  http://localhost:8000          → JSON with name: "CaseFlow MCP"
+□  http://localhost:8000/health   → {"status": "ok"}
+□  http://localhost:8000/docs     → Swagger UI loads with all endpoints
+□  http://localhost:3000          → Dashboard loads with demo data
+□  Dashboard: Matter list         → Shows 3 demo matters
+□  Dashboard: Intake Queue        → Shows 4 pre-processed communications
+□  Navigation: Knowledge          → 3 knowledge sources visible
+□  Navigation: Audit              → Audit entries from startup seeding visible
+```
+
+**Optional — test the AI pipeline** (only if you configured an API key in step ❸):
+
+1. Navigate to **Intake** in the sidebar
+2. Click **"+ New Communication"**
+3. Paste a sample legal email into the body field
+4. Submit
+5. The communication should appear in the queue with AI-generated category, urgency, summary, extracted deadlines, and tasks
+
+<br/>
+
+---
+
+### ❼ &nbsp; (Optional) MCP Server for Claude Desktop
+
+Only needed if you want to use the 16 CaseFlow tools from inside Claude Desktop.
+
+**Step 1 — Install the MCP package** (in the same venv as the backend):
+
+```bash
+# Make sure (venv) is active, then:
+pip install mcp
+```
+
+**Step 2 — Find your Claude Desktop config file:**
+
+| OS | Config file location |
+|----|---------------------|
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Mac | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+
+**Step 3 — Add the CaseFlow MCP server:**
+
+```jsonc
+{
+  "mcpServers": {
+    "caseflow": {
+      "command": "python",
+      "args": [
+        "C:/Users/YourName/Desktop/AI_projects/unified_legal_workflow_platform/mcp-server/server.py"
+      ],
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-your-key-here"
+        // -- OR for Gemini:
+        // "GEMINI_API_KEY": "your-gemini-key-here",
+        // "LLM_MODEL": "gemini-2.0-flash"
+      }
+    }
+  }
+}
+```
+
+> [!WARNING]
+> Use the **full absolute path** to `server.py` — not a relative path. On Windows, use forward slashes `/` or escaped backslashes `\\`.
+
+**Step 4 — Restart Claude Desktop completely** (quit from the system tray, not just close the window).
+
+**Step 5 — Verify:**
+
+In Claude Desktop, click the tools icon (⊕) in the message input. You should see **16 CaseFlow tools** listed. Type:
+
+```
+List my matters
+```
+
+Claude should respond with your demo matters pulled live from the database.
+
+<br/>
+
+---
 
 ### ⚡ One-Command Launch (Windows PowerShell)
 
+If you've already done the setup above once, use the convenience scripts for day-to-day startup:
+
 ```powershell
-# Terminal 1 — Backend API
+# Terminal 1 — Start backend (activates venv automatically)
 .\scripts\start_backend.ps1
 
-# Terminal 2 — Frontend
+# Terminal 2 — Start frontend
 .\scripts\start_frontend.ps1
 ```
 
 <br/>
 
-### 🔧 Manual Setup
+---
+
+### 🔧 Troubleshooting
 
 <details>
-<summary><strong>Backend (FastAPI)</strong></summary>
+<summary><strong>❌ &nbsp;"python: command not found" or "python3 not found"</strong></summary>
 
 <br/>
 
-```bash
-cd backend
-
-# 1. Create virtual environment
-python -m venv venv
-venv\Scripts\activate           # Windows
-# source venv/bin/activate      # Mac / Linux
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Configure environment
-cp .env.example .env
-# Edit .env — add ANTHROPIC_API_KEY (optional — platform works without it)
-
-# 4. Start server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-| Endpoint | URL |
-|----------|-----|
-| 🌐 API | `http://localhost:8000` |
-| 📚 Swagger UI | `http://localhost:8000/docs` |
-| 📖 ReDoc | `http://localhost:8000/redoc` |
+Python is not on your PATH. Either:
+- Reinstall Python and check "Add Python to PATH" during installation
+- Use the full path: `C:\Python311\python.exe -m venv venv`
+- On Mac/Linux, try `python3` instead of `python`
 
 </details>
 
 <details>
-<summary><strong>Frontend (Next.js)</strong></summary>
+<summary><strong>❌ &nbsp;"Cannot activate venv" on Windows</strong></summary>
 
 <br/>
 
-```bash
-cd frontend
+PowerShell execution policy may be blocking scripts. Run:
 
-npm install
-npm run dev
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-**Frontend:** `http://localhost:3000`
+Then try activating the venv again.
 
 </details>
 
 <details>
-<summary><strong>MCP Server (Claude Desktop)</strong></summary>
+<summary><strong>❌ &nbsp;Backend starts but returns 500 errors</strong></summary>
 
 <br/>
 
-```bash
-pip install mcp
-
-cd mcp-server
-python server.py
-# Starts silently — waits for stdio from Claude Desktop
-```
-
-Then configure Claude Desktop per the [setup guide above](#-mcp-server--claude-desktop-integration).
+Check the terminal where uvicorn is running for the Python traceback. Common causes:
+- Missing `.env` file — copy from `.env.example`
+- Invalid API key format — Anthropic keys start with `sk-ant-`, Gemini keys with `AIza`
+- Database file permissions — try deleting `caseflow.db` and restarting (it recreates on startup)
 
 </details>
 
+<details>
+<summary><strong>❌ &nbsp;Frontend shows empty data / "Failed to fetch"</strong></summary>
+
 <br/>
 
-### Environment Configuration
+The frontend cannot reach the backend. Check:
+1. Is the backend running? → `http://localhost:8000/health` should return `{"status": "ok"}`
+2. Is it on port 8000? The frontend is hardcoded to call `localhost:8000`
+3. Any firewall blocking port 8000?
 
-```bash
-# backend/.env
+</details>
 
-# ─── AI Intelligence (optional — platform works without this) ────────────────
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+<details>
+<summary><strong>❌ &nbsp;MCP tools not appearing in Claude Desktop</strong></summary>
 
-# ─── Database ────────────────────────────────────────────────────────────────
-DATABASE_URL=sqlite:///./caseflow.db      # dev default
-# DATABASE_URL=postgresql://user:pass@host/db   # production
+<br/>
 
-# ─── App Settings ────────────────────────────────────────────────────────────
-SECRET_KEY=change-me-in-production
-ENVIRONMENT=development
-SEED_DEMO_DATA=true                        # seeds realistic data on first launch
-```
+1. Verify the path in `claude_desktop_config.json` is absolute and uses forward slashes
+2. Make sure `mcp` package is installed: `pip show mcp` should show a version
+3. Fully quit Claude Desktop (system tray → Quit), not just close the window
+4. Check Claude Desktop logs: Windows: `%APPDATA%\Claude\logs\`
 
-> [!TIP]
-> **Demo Mode works out of the box.** Without `ANTHROPIC_API_KEY`, every AI feature returns realistic demo responses and the database is pre-seeded with complete test data. You can fully evaluate every feature in under 2 minutes.
+</details>
 
 <br/>
 
@@ -1009,9 +1438,11 @@ Each communication includes pre-generated summaries, extracted deadlines, tasks,
 unified_legal_workflow_platform/
 │
 ├── 📂 backend/
+│   ├── .env.example                    ← Copy to .env and fill in your API key
+│   ├── requirements.txt                ← All Python dependencies incl. google-genai
 │   └── app/
 │       ├── main.py                     ← App entrypoint, router registration
-│       ├── config.py                   ← Settings via Pydantic BaseSettings
+│       ├── config.py                   ← Settings: ANTHROPIC_API_KEY · GEMINI_API_KEY · LLM_MODEL
 │       ├── database.py                 ← SQLAlchemy engine + session factory
 │       │
 │       ├── 📂 models/                  ← SQLAlchemy ORM models
@@ -1021,7 +1452,7 @@ unified_legal_workflow_platform/
 │       │   ├── timeline.py             ← TimelineEvent, EventType
 │       │   ├── knowledge.py            ← KnowledgeItem
 │       │   ├── audit.py                ← AuditLog
-│       │   ├── note.py                 ← MatterNote, NoteType
+│       │   ├── note.py                 ← MatterNote, NoteType (general·strategy·observation·risk)
 │       │   └── user.py                 ← User (RBAC — v1.5)
 │       │
 │       ├── 📂 schemas/                 ← Pydantic v2 request/response schemas
@@ -1033,11 +1464,12 @@ unified_legal_workflow_platform/
 │       │   ├── timelines.py            ← Timeline per matter
 │       │   ├── knowledge.py            ← Knowledge base + Q&A
 │       │   ├── audit.py                ← Audit log
-│       │   ├── notes.py                ← Matter notes
+│       │   ├── notes.py                ← Matter notes (add · list · delete)
 │       │   ├── drafts.py               ← AI draft generation
 │       │   └── connectors.py           ← Connector hub metadata
 │       │
-│       ├── 📂 intelligence/            ← Claude-powered AI modules
+│       ├── 📂 intelligence/            ← AI modules — work with ANY configured provider
+│       │   ├── llm_client.py           ← Provider abstraction: Anthropic · Gemini · Demo
 │       │   ├── intake_classifier.py    ← Category + urgency classification
 │       │   ├── summarizer.py           ← Key facts + issues extraction
 │       │   ├── extractor.py            ← Dates + tasks + parties extraction
@@ -1057,7 +1489,7 @@ unified_legal_workflow_platform/
 │       │   ├── page.tsx                ← Dashboard
 │       │   ├── layout.tsx              ← Root layout + sidebar
 │       │   ├── globals.css             ← Enterprise dark theme design system
-│       │   ├── matters/                ← Matter list + detail pages
+│       │   ├── matters/                ← Matter list + detail (tabs: overview·timeline·tasks·comms·notes)
 │       │   ├── intake/                 ← Intake queue + communication detail
 │       │   ├── tasks/                  ← Tasks + Deadlines
 │       │   ├── timeline/               ← Global timeline view
@@ -1078,8 +1510,8 @@ unified_legal_workflow_platform/
 │
 ├── 📂 scripts/
 │   ├── setup.ps1                       ← Full first-time setup
-│   ├── start_backend.ps1
-│   └── start_frontend.ps1
+│   ├── start_backend.ps1               ← Activate venv + start uvicorn
+│   └── start_frontend.ps1              ← npm run dev
 │
 └── README.md
 ```
@@ -1147,7 +1579,7 @@ POST   /api/knowledge/query             Run grounded Q&A with citations
 ```
 GET    /api/audit                       Audit log (filter: event_type, matter_id)
 GET    /api/notes/matters/{id}          Get matter notes
-POST   /api/notes/matters/{id}          Create matter note
+POST   /api/notes/matters/{id}          Create matter note (type: general·strategy·observation·risk)
 DELETE /api/notes/{id}                  Delete note
 POST   /api/drafts/generate             Generate AI draft reply
 GET    /api/connectors/                 List connectors and their status
@@ -1172,17 +1604,19 @@ GET    /api/connectors/                 List connectors and their status
 ```
 
 - ✅ Manual intake + full AI pipeline (classify / summarize / extract / link)
-- ✅ Matter management (create / list / detail / notes)
+- ✅ Matter management (create / list / detail / notes with 4 type categories)
 - ✅ Deadline tracking — approval-first confirmation lifecycle
 - ✅ Task management — priority / status / assignee / due date
 - ✅ Source-linked timeline builder (10 event types)
 - ✅ Grounded legal Q&A with numbered citations
-- ✅ AI draft reply generator (approval-first)
+- ✅ AI draft reply generator (approval-first, always `requires_review: true`)
 - ✅ Connector Hub UI (v2 connectors scoped)
-- ✅ Full immutable audit log with AI model attribution
+- ✅ Full immutable audit log with AI model + provider attribution
 - ✅ 16-tool MCP server — Claude Desktop integration
 - ✅ Enterprise dark UI (glassmorphism + 3D cards + animations)
 - ✅ Full demo mode — zero config required
+- ✅ **Dual AI provider support — Anthropic Claude + Google Gemini**
+- ✅ `llm_client.py` abstraction layer — swap providers via env variable
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1223,7 +1657,7 @@ GET    /api/connectors/                 List connectors and their status
 
 | Layer | Technology | Reason |
 |-------|-----------|--------|
-| 🤖 **AI Engine** | Anthropic Claude `sonnet-4-6` | Best legal reasoning, structured output, minimal hallucination |
+| 🤖 **AI Engine** | Anthropic Claude `sonnet-4-6` · Google Gemini `2.0-flash` | Best legal reasoning (Claude) · cost-effective free tier (Gemini) · swap via env var |
 | 🔗 **Protocol** | Model Context Protocol (MCP) | Native Claude Desktop tool integration over stdio |
 | ⚙️ **Backend** | FastAPI + Python 3.11 | Async, fast, auto-OpenAPI, type-safe |
 | 🗄️ **ORM** | SQLAlchemy 2.0 | Type-safe, SQLite → PostgreSQL with zero code changes |
@@ -1231,6 +1665,7 @@ GET    /api/connectors/                 List connectors and their status
 | 💾 **Database** | SQLite (dev) → PostgreSQL (prod) | Zero-config dev, enterprise-ready prod |
 | 🖥️ **Frontend** | Next.js 14 (App Router) | Server components, file-based routing, TypeScript native |
 | 📡 **HTTP Client** | Axios + TypeScript interfaces | Type-safe API calls, interceptors for auth |
+| 📦 **AI SDKs** | `anthropic` · `google-genai` | Official SDKs for both AI providers |
 | 🎨 **Styling** | CSS custom properties + glassmorphism | Enterprise dark theme, 3D effects — no Tailwind lock-in |
 | 🔤 **Fonts** | Inter + JetBrains Mono | Premium readability for dense legal data |
 
@@ -1264,7 +1699,7 @@ Fully demonstrable without an API key. Realistic seeded data + fallback response
 The same data layer powers both the web app and Claude Desktop integration. Attorneys choose their workflow: structured UI or natural-language conversation.
 
 ### 🛡️ Immutable Audit
-Nothing is deleted from the audit log. Every AI model call, confirmation, and action is permanently attributed to a model version and a user.
+Nothing is deleted from the audit log. Every AI model call, confirmation, and action is permanently attributed to a model version, provider, and timestamp.
 
 ### 🎯 Legal-Domain First
 Every design decision — urgency levels, deadline lifecycle, approval gates — is modeled on how legal teams actually work, not generic project management.
@@ -1311,6 +1746,7 @@ cd backend && python -c "from app.main import app; print('OK')"
 # ◆ What feature / fix
 # ◆ Which MCP tools are affected (if any)
 # ◆ How to test it (demo steps or test data)
+# ◆ Which AI providers were tested against
 ```
 
 <br/>
@@ -1333,7 +1769,7 @@ MIT License — free to use, modify, and distribute. See [LICENSE](LICENSE).
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Powered by MCP · Made for Legal Teams · Author : Joshith Reddy Aleti
+  Powered by MCP · Made for Legal Teams · Author: Joshith Reddy Aleti
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -1345,6 +1781,7 @@ Powered by MCP · Made for Legal Teams · Author : Joshith Reddy Aleti
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
 [![Anthropic](https://img.shields.io/badge/Claude-CC785C?style=flat-square&logo=anthropic&logoColor=white)](https://anthropic.com)
+[![Gemini](https://img.shields.io/badge/Gemini-4285F4?style=flat-square&logo=google&logoColor=white)](https://aistudio.google.com)
 [![MCP](https://img.shields.io/badge/MCP-7C3AED?style=flat-square)](https://modelcontextprotocol.io)
 
 </div>
