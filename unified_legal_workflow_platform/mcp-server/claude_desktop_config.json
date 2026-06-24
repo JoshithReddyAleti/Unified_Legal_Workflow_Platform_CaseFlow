@@ -1,0 +1,17 @@
+{
+  "_comment": "Add the contents of 'mcpServers' into your Claude Desktop config at:",
+  "_config_path_mac": "~/Library/Application Support/Claude/claude_desktop_config.json",
+  "_config_path_win": "%APPDATA%/Claude/claude_desktop_config.json",
+
+  "mcpServers": {
+    "caseflow": {
+      "command": "python",
+      "args": [
+        "C:/Users/joshithreddy.aleti/OneDrive - Janus International Group/Desktop/AI_projects_personal/unified_legal_workflow_platform/mcp-server/server.py"
+      ],
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-your-key-here"
+      }
+    }
+  }
+}
