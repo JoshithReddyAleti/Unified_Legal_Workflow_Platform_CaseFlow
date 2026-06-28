@@ -400,3 +400,11 @@ CASE LAW NOTE:
 
     db.commit()
     print("Demo data seeded successfully.")
+
+
+class MockDataService:
+    """Compatibility wrapper for the demo data seeding service."""
+
+    @staticmethod
+    def seed_demo_data(db: Session):
+        seed_demo_data(db)

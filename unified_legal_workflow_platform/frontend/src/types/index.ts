@@ -138,4 +138,5 @@ export interface Connector {
   features: string[];
   last_sync: string | null;
   messages_synced: number;
+  docs_url?: string;
 }
